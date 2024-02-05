@@ -125,3 +125,15 @@ void Snake::eat(int foodPosX, int foodPosY)
     xbodyparts.insert(xbodyparts.begin(), foodPosX);
     ybodyparts.insert(ybodyparts.begin(), foodPosY);
 }
+
+bool Snake::is_hit_myself()
+{
+    int headX, headY;
+    headX = this->xbodyparts[0];
+    headY = this->ybodyparts[0];
+    for (int i = 1; i < this->xbodyparts.size(); i++) {
+        if (headX == this->xbodyparts[i] && headY == this->ybodyparts[i])
+            return true;
+    }
+    return false;
+}

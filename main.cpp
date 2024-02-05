@@ -6,12 +6,15 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <termios.h>
-#include <random>
+#include <cstdlib>
 
 #define ROWS 20 
 #define COLUMNS 50 
 
 char GRAPHICS[ROWS][COLUMNS]; 
+bool IS_FOOD_ON_SCREEN = false;
+int FOOD_X_POS = 0;
+int FOOD_Y_POS = 0;
 
 void refresh_graphics(void);
 void print_graphics(void);
@@ -22,9 +25,12 @@ void rm_pixel(int x, int y);
 void something();
 void draw(std::vector<int> xs, std::vector<int> ys);
 void draw_snake();
-void moving_snake(Snake* s);
+void start_game(Snake* s);
 int get_input_from_user();
-int get_next_food_pos();
+int get_random_x();
+int get_random_y();
+void spawn_food();
+bool is_snake_get_food(Snake* s);
 
 int main()
 {
@@ -36,11 +42,13 @@ int main()
     attr = old;
     attr.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &attr);
+    // random numb generator initialization
+    srand((unsigned) time(0));
     // code start here
     refresh_graphics();
     Snake *s = new Snake(ROWS, COLUMNS);
     std::cout << std::endl;
-    moving_snake(s);
+    start_game(s);
     delete s;
     tcsetattr(STDIN_FILENO, TCSANOW, &old);
     return 0;
@@ -150,14 +158,25 @@ int get_input_from_user(int* out)
     return 0;
 }
 
-void moving_snake(Snake* s)
+void start_game(Snake* s)
 {
     int tmp, result;
     while (true) {
         refresh_graphics();
         draw_snake(s);
+        if (s->is_hit_myself())
+            return;
+        if (!IS_FOOD_ON_SCREEN)
+            spawn_food();
+        else
+            GRAPHICS[FOOD_X_POS][FOOD_Y_POS] = '#';
+        if (is_snake_get_food(s)) {
+            IS_FOOD_ON_SCREEN = false;
+            s->eat(FOOD_X_POS, FOOD_Y_POS);
+            continue;
+        }
         print_graphics();
-        usleep(200000);
+        usleep(150000);
         result = get_input_from_user(&tmp);
         if (result == 0) {
             s->change_direction(static_cast<Snake::Directions>(tmp));
@@ -166,3 +185,42 @@ void moving_snake(Snake* s)
         move_cursor(27);
     }
 }
+
+int get_random_x()
+{
+    int x = (rand()%ROWS) + 1;
+    return x;
+}
+
+int get_random_y()
+{
+    int y = (rand()%COLUMNS) + 1;
+    return y;
+}
+
+void spawn_food()
+{
+    int x, y;
+    while (true) {
+        x = get_random_x();
+        y = get_random_y();
+        if (GRAPHICS[x][y] != ' ')
+            continue;
+        GRAPHICS[x][y] = '#';
+        FOOD_X_POS = x;
+        FOOD_Y_POS = y;
+        IS_FOOD_ON_SCREEN = true;
+        return;
+    }
+}
+
+bool is_snake_get_food(Snake* s)
+{
+    int x = s->get_next_x_pos();
+    int y = s->get_next_y_pos(); 
+    if (y == FOOD_Y_POS && x == FOOD_X_POS) {
+        return true;
+    }
+    return false;
+}
+
